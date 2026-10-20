@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pendulum Lab</title>
+<meta name="description" content="Interactive pendulum simulator for physics teaching: forces and Newton's third law, energy, graphs, non-inertial frame, coupled and driven pendulums.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,500,0,0&display=block" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script type="module" src="js/main.js"></script>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1 class="word" aria-label="Pendulum">
+      <span class="k">p</span><span>e</span><span class="a">n</span><span>d</span><span class="b">u</span><span>l</span><span class="a">u</span><span class="b sw">m</span>
+    </h1>
+    <p class="tag-line">Swing a pendulum, watch every force and its Newton's-third-law partner, then ride along with the ball.</p>
+  </div>
+  <button class="icon-btn" id="helpBtn" aria-label="How it works"><span class="ms">help</span></button>
+</header>
+
+<main class="layout">
+  <section class="stage">
+    <div class="toolbar card">
+      <button class="btn primary" id="playBtn" aria-label="Pause"><span class="ms" id="playIcon">pause</span><span class="lbl" id="playLbl">Pause</span></button>
+      <button class="btn" id="stepBtn" title="Advance 1/50 s" aria-label="Step forward"><span class="ms">skip_next</span><span class="lbl">Step</span></button>
+      <button class="btn" id="resetBtn" title="Back to the last release" aria-label="Reset to last release"><span class="ms">replay</span><span class="lbl">Reset</span></button>
+      <div class="seg small" id="speedSeg" aria-label="Time speed">
+        <button data-v="0.1">0.1×</button><button data-v="0.25">¼×</button><button data-v="0.5">½×</button><button data-v="1" class="on">1×</button>
+      </div>
+      <span class="grow"></span>
+      <div class="seg view" id="viewSeg" aria-label="Point of view">
+        <button data-v="lab" class="on" title="Inertial frame: the lab"><span class="ms">public</span><span class="t">Lab</span></button>
+        <button data-v="ball" title="Non-inertial frame: ride on the ball"><span class="ms">center_focus_strong</span><span class="t">Ball</span></button>
+      </div>
+      <button class="btn mob-help" id="helpBtn2" aria-label="How it works"><span class="ms">help</span></button>
+    </div>
+
+    <div class="canvas-wrap card" id="wrap">
+      <canvas id="cv" aria-label="Pendulum simulation"></canvas>
+      <div class="readout" id="readout"></div>
+      <canvas id="ebars" aria-label="Energy bars"></canvas>
+      <div class="hint" id="hint"></div>
+      <div class="toast" id="toast" role="status"></div>
+    </div>
+
+    <div class="quick card" id="quick"></div>
+  </section>
+
+  <aside class="panel">
+    <div class="tabs" role="tablist">
+      <button class="tab on" data-tab="graphs" role="tab"><span class="ms">show_chart</span>Graphs</button>
+      <button class="tab" data-tab="show" role="tab"><span class="ms">layers</span>Show</button>
+      <button class="tab" data-tab="setup" role="tab"><span class="ms">tune</span>Setup</button>
+      <button class="icon-btn mob-help" id="helpBtn3" aria-label="How it works"><span class="ms">help</span></button>
+    </div>
+
+    <div class="tabpane card" id="pane-graphs">
+      <div class="gtop">
+        <div class="seg small" id="gMode"><button data-v="time" class="on">Versus time</button><button data-v="phase">Phase θ–ω</button></div>
+        <div class="seg small" id="gWin"><button data-v="5">5 s</button><button data-v="10" class="on">10 s</button><button data-v="20">20 s</button></div>
+      </div>
+      <div class="gchips" id="gchips"></div>
+      <canvas id="gcv" aria-label="Graphs"></canvas>
+      <table class="ptable" id="ptable"></table>
+      <div class="csvrow"><button class="btn" id="csvBtn"><span class="ms">content_copy</span>Copy data as CSV</button><span class="note">All recorded quantities, 100 samples per second</span></div>
+      <textarea id="csvOut" hidden readonly aria-label="CSV data"></textarea>
+    </div>
+
+    <div class="tabpane card" id="pane-show" hidden>
+      <div id="showList"></div>
+      <div class="ctl"><label for="arrowR">Arrow size <b id="arrowL"></b></label><input type="range" id="arrowR" min="0.4" max="2.5" step="0.05" value="1"></div>
+    </div>
+
+    <div class="tabpane card" id="pane-setup" hidden>
+      <h3 class="grp">Rope</h3>
+      <div class="seg" id="modelSeg">
+        <button data-v="rod" class="on">Rigid rod</button><button data-v="string">String</button><button data-v="elastic">Elastic</button>
+      </div>
+      <p class="note" id="modelNote"></p>
+      <div class="ctl" id="kCtl"><label for="kR">Stiffness k <b id="kL"></b></label><input type="range" id="kR" min="0" max="100" step="1"></div>
+      <div class="ctl"><label for="LR">Length L <b id="LL"></b></label><input type="range" id="LR" min="0.1" max="5" step="0.05"></div>
+      <div class="ctl" id="betaCtl"><label for="betaR">Pivot friction (rod only) <b id="betaL"></b></label><input type="range" id="betaR" min="0" max="0.5" step="0.005"></div>
+
+      <h3 class="grp">Ball and gravity</h3>
+      <div class="ctl"><label for="mR">Mass m <b id="mL"></b></label><input type="range" id="mR" min="0.05" max="5" step="0.05"></div>
+      <div class="ctl"><label for="gR">Gravity g <b id="gL"></b></label><input type="range" id="gR" min="0" max="30" step="0.01">
+        <div class="seg small" id="gSeg"><button data-v="9.81">Earth</button><button data-v="1.62">Moon</button><button data-v="3.71">Mars</button><button data-v="24.79">Jupiter</button><button data-v="0">Zero</button></div></div>
+
+      <h3 class="grp">Resistance</h3>
+      <div class="ctl"><label for="cR">Air drag, grows with v² <b id="cL"></b></label><input type="range" id="cR" min="0" max="0.5" step="0.005"></div>
+      <div class="ctl"><label for="bR">Viscous friction, grows with v <b id="bL"></b></label><input type="range" id="bR" min="0" max="2" step="0.01"></div>
+
+      <h3 class="grp">Driven support</h3>
+      <button class="tg" data-ly="drive"><span class="sw dot" style="background:var(--ink)"></span><span class="txt">Shake the support<small>The support of pendulum A moves back and forth: x = A·sin(2πft)</small></span><span class="box"></span></button>
+      <div id="driveBox">
+        <div class="ctl"><label>Direction</label><div class="seg small" id="dSeg"><button data-v="h" class="on">Horizontal</button><button data-v="v">Vertical</button></div></div>
+        <div class="ctl"><label for="dAR">Amplitude A <b id="dAL"></b></label><input type="range" id="dAR" min="0.002" max="0.3" step="0.002"></div>
+        <div class="ctl"><label for="dFR">Frequency f <b id="dFL"></b></label><input type="range" id="dFR" min="0" max="100" step="0.1"></div>
+        <div class="row"><button class="btn" id="dMatch"><span class="ms">tune</span>Match f₀</button></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="dRes"><span class="ms">waves</span>Try resonance</button>
+        <button class="btn" id="dKap"><span class="ms">vertical_align_top</span>Try Kapitza</button>
+      </div>
+      <p class="note">Resonance: small horizontal shaking at the natural frequency, starting from rest. Kapitza: fast vertical shaking holds the rod upside down. Both switch the shaking on.</p>
+
+      <h3 class="grp">Liquid in the ball</h3>
+      <button class="tg" data-ly="fluid"><span class="sw dot" style="background:var(--liquid)"></span><span class="txt">Fill the ball with liquid<small>The surface settles perpendicular to the effective gravity g − a</small></span><span class="box"></span></button>
+      <div class="ctl"><label>Liquid model</label><div class="seg small" id="lqSeg"><button data-v="simple" class="on">Simple surface</button><button data-v="particles">2D particles</button></div></div>
+      <div class="ctl"><label for="fillR">Fill level <b id="fillL"></b></label><input type="range" id="fillR" min="0.1" max="0.9" step="0.05"></div>
+      <div class="ctl" id="zCtl"><label for="zR">Sloshing damping <b id="zL"></b></label><input type="range" id="zR" min="0.02" max="0.8" step="0.01"></div>
+
+      <h3 class="grp">Second pendulum</h3>
+      <button class="tg" data-ly="two"><span class="sw dot" style="background:var(--ball2)"></span><span class="txt">Add pendulum B<small>Same rope type, g and resistance; its own length and mass</small></span><span class="box"></span></button>
+      <div id="twoBox">
+        <div class="ctl"><label>Link</label><div class="seg small" id="cpSeg"><button data-v="free">Independent</button><button data-v="spring" class="on">Coupled by a spring</button></div></div>
+        <div class="ctl"><label for="LBR"><span>Length L<sub>B</sub></span> <b id="LBL"></b></label><input type="range" id="LBR" min="0.1" max="5" step="0.05"></div>
+        <div class="ctl"><label for="mBR"><span>Mass m<sub>B</sub></span> <b id="mBL"></b></label><input type="range" id="mBR" min="0.05" max="5" step="0.05"></div>
+        <div class="ctl"><label for="dR">Distance between supports <b id="dL"></b></label><input type="range" id="dR" min="0.2" max="3" step="0.05"></div>
+        <div class="ctl" id="kapCtl"><label for="kapR">Spring constant κ <b id="kapL"></b></label><input type="range" id="kapR" min="0" max="100" step="0.5"></div>
+      </div>
+
+      <h3 class="grp">Release by numbers</h3>
+      <div class="row">
+        <label class="num">θ<sub>A</sub> <input type="number" id="th0" value="40" step="1" min="-180" max="180" inputmode="decimal"> °</label>
+        <label class="num">v<sub>A</sub> <input type="number" id="v0" value="0" step="0.1" inputmode="decimal"> m/s</label>
+        <label class="num" id="thBWrap">θ<sub>B</sub> <input type="number" id="thB" value="0" step="1" min="-180" max="180" inputmode="decimal"> °</label>
+        <button class="btn primary" id="relBtn"><span class="ms">rocket_launch</span>Release</button>
+      </div>
+      <p class="note">Or drag a ball on the canvas. Let go to release it at rest, swipe to throw it.</p>
+    </div>
+  </aside>
+</main>
+
+<dialog id="help">
+  <div class="word dlg-word" aria-hidden="true"><span class="k">p</span><span>e</span><span class="a">n</span><span>d</span><span class="b">u</span><span>l</span><span class="a">u</span><span class="b">m</span></div>
+  <h2>How it works</h2>
+  <p><b>Place and launch.</b> In the lab view, drag the ball anywhere. Lift your finger without moving to release it at rest; swipe and let go to give it the velocity of your swipe. <kbd>Space</kbd> pauses, <kbd>R</kbd> resets to the last release, <kbd>V</kbd> switches view.</p>
+  <h3>Three ropes</h3>
+  <ul>
+    <li><b>Rigid rod</b>: length fixed. It can pull (tension) or push (compression) on the ball.</li>
+    <li><b>String</b>: it can only pull. When the tension would become negative the string goes slack and the ball flies as a projectile until the string snaps tight again. That jerk removes the radial velocity, and its kinetic energy goes into the dissipated bar.</li>
+    <li><b>Elastic</b>: a rope that stretches like a spring, T = k(r − L), and goes slack when shorter than L.</li>
+  </ul>
+  <h3>Forces and the third law</h3>
+  <p>On the ball act the weight W (Earth on ball), the rope force T (rope on ball) and the resistance D (air on ball). Each has a partner of equal size and opposite direction acting on another body: the ball pulls the rope, the support pulls the rope, the rope pulls the support, the ball pulls the Earth. Partners carry the same number and colour; the partner arrow has a hollow head. The rope is massless, so the two forces on it always cancel.</p>
+  <p><b>Split along rope ∥ and ⊥</b> decomposes the forces along the rope and perpendicular to it. The ∥ parts give the centripetal force m v²/L, the ⊥ parts change the speed.</p>
+  <h3>Ride on the ball</h3>
+  <p>In the ball view the camera follows the ball, which is at rest in this frame. To keep Newton's second law working you must add the apparent force −m·a, where a is the acceleration of the frame. Its rope-wise part is the centrifugal force, its other part opposes the tangential acceleration. In this frame W + T + D − m·a = 0.</p>
+  <h3>The liquid</h3>
+  <p>The liquid surface settles perpendicular to the effective gravity g − a. Without drag and friction, g − a equals T/m along the rope, so the surface always stays perpendicular to the rope, even at the top of the swing. Add drag and the surface tilts. With a slack string the ball is in free fall: g − a ≈ 0 and the liquid floats.</p>
+  <h3>Energy</h3>
+  <p>K kinetic, U<sub>g</sub> gravitational (zero at the lowest point of the circle), U<sub>el</sub> elastic, Q dissipated by drag, friction and string jerks. The total bar stays constant: what leaves the mechanical bars shows up in Q.</p>
+  <h3>Pivot friction</h3>
+  <p>A rigid rod rubbing on its pivot feels a braking torque proportional to ω. The rod passes it to the ball as a force across the rope, so the rope force is no longer along the rope. A string cannot carry a torque, so this option works only with the rod.</p>
+  <h3>Force polygon</h3>
+  <p>The forces on ball A drawn tip to tail. In the lab view the dashed side that closes the shape is ΣF = m·a. In the ball view −m·a is added and the polygon closes: the forces sum to zero.</p>
+  <h3>Two pendulums</h3>
+  <p>Pendulum B hangs beside A. Independent: compare lengths, masses or amplitudes (isochronism). Coupled by a spring: energy flows from one to the other with the beat period shown in the Graphs tab. The two spring forces are a third-law pair (number 4).</p>
+  <h3>Driven support</h3>
+  <p>The support of A shakes as A·sin(2πft). Near f₀ the amplitude grows (resonance); strong drives give chaotic motion. Fast vertical shaking can keep the rod upside down (Kapitza pendulum). The energy bar W is the work done by the support; Σ − W stays constant.</p>
+  <h3>Phone on the ball</h3>
+  <p>A phone strapped to ball A reads what phyphox would show: the accelerometer measures a − g ("with g", reads +9.81 at rest) or a ("without g") along its own axes, y toward the support and x along the swing; the gyroscope reads ω. Pick these quantities in the Graphs tab to compare with a real phone swung on a string.</p>
+  <h3>Liquid models</h3>
+  <p>Simple surface: a damped surface that tilts toward perpendicular to g − a. 2D particles: about two hundred particles that push each other apart, simulated inside the ball. Slower on old phones.</p>
+  <h3>Data</h3>
+  <p>Copy data as CSV puts every recorded quantity on the clipboard, ready to paste into a spreadsheet.</p>
+  <h3>Period</h3>
+  <p>The Graphs tab times each full swing and compares it with the small-angle formula 2π√(L/g) and with the exact period for that amplitude (computed with the arithmetic-geometric mean).</p>
+  <div class="row" style="margin-top:14px"><button class="btn primary" id="helpClose">Close</button></div>
+</dialog>
+</body>
+</html>
