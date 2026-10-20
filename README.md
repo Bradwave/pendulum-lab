@@ -1,6 +1,6 @@
 # Pendulum Lab
 
-An interactive pendulum simulator for teaching physics, built for phones and desktops. No build step, no dependencies: plain HTML, CSS and JavaScript modules.
+An interactive pendulum simulator for teaching physics, built for phones and desktops. No build step, no dependencies: plain HTML, CSS and JavaScript modules. Vibecoded with Claude, with <3.
 
 ## Features
 
